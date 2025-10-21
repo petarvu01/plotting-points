@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coordinate System Game</title>
+<style>
+    body { font-family: Arial, sans-serif; text-align: center; }
+    #container { display: inline-block; margin-top: 30px; }
+    #coords { margin: 10px 0; font-size: 1.2em; }
+    #result { margin: 10px 0; font-weight: bold; }
+    canvas { background: #fff; border: 1px solid #333; }
+    button { margin-top: 10px; padding: 8px 16px; font-size: 1em; }
+</style>
+</head>
+<body>
+<h1>Coordinate System Game</h1>
+<div id="container">
+<canvas id="coordCanvas" width="500" height="500"></canvas>
+<div id="coords"></div>
+<button id="checkBtn">Check</button>
+<button id="againBtn" style="display:none; margin-left:10px;">Again</button>
+<div id="result"></div>
+</div>
+<script>
+    const canvas = document.getElementById('coordCanvas');
+    const ctx = canvas.getContext('2d');
+    const size = 500;
+    const gridMin = -10, gridMax = 10;
+    const gridStep = 1;
+    const unit = size / (gridMax - gridMin);
+    const origin = { x: size / 2, y: size / 2 };
+ 
+    // Random target point
+    let target, dragPoint, dragging = false;
+ 
+    function resetGame() {
+      target = {
+        x: Math.floor(Math.random() * 21) - 10,
+        y: Math.floor(Math.random() * 21) - 10
+      };
+      document.getElementById('coords').textContent = `Target: (${target.x}, ${target.y})`;
+      dragPoint = { x: 0, y: 0 };
+      document.getElementById('result').textContent = '';
+      document.getElementById('againBtn').style.display = 'none';
+      redraw();
+    }
+    resetGame();
+ 
+    function toCanvasCoords(x, y) {
+      return {
+        x: origin.x + x * unit,
+        y: origin.y - y * unit
+      };
+    }
+    function toGridCoords(x, y) {
+      return {
+        x: Math.round((x - origin.x) / unit),
+        y: Math.round((origin.y - y) / unit)
+      };
+    }
+ 
+    function drawGrid() {
+      ctx.clearRect(0, 0, size, size);
+      ctx.strokeStyle = '#ccc';
+      ctx.lineWidth = 1;
+      for (let i = gridMin; i <= gridMax; i += gridStep) {
+        // Vertical lines
+        let cx = toCanvasCoords(i, 0).x;
+        ctx.beginPath();
+        ctx.moveTo(cx, 0);
+        ctx.lineTo(cx, size);
+        ctx.stroke();
+        // Horizontal lines
+        let cy = toCanvasCoords(0, i).y;
+        ctx.beginPath();
+        ctx.moveTo(0, cy);
+        ctx.lineTo(size, cy);
+        ctx.stroke();
+      }
+      // Axes
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2;
+      // X axis
+      ctx.beginPath();
+      ctx.moveTo(0, origin.y);
+      ctx.lineTo(size, origin.y);
+      ctx.stroke();
+      // Y axis
+      ctx.beginPath();
+      ctx.moveTo(origin.x, 0);
+      ctx.lineTo(origin.x, size);
+      ctx.stroke();
+      // Axis labels
+      ctx.fillStyle = '#000';
+      ctx.font = '12px Arial';
+      for (let i = gridMin; i <= gridMax; i++) {
+        if (i !== 0) {
+          // X labels
+          let pt = toCanvasCoords(i, 0);
+          ctx.fillText(i, pt.x - 8, origin.y + 15);
+          // Y labels
+          pt = toCanvasCoords(0, i);
+          ctx.fillText(i, origin.x + 5, pt.y + 4);
+        }
+      }
+    }
+ 
+    function drawPoints() {
+      // Draggable point
+      let dragCanvas = toCanvasCoords(dragPoint.x, dragPoint.y);
+      ctx.beginPath();
+      ctx.arc(dragCanvas.x, dragCanvas.y, 10, 0, 2 * Math.PI);
+      ctx.fillStyle = '#0074D9';
+      ctx.fill();
+      ctx.strokeStyle = '#003366';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+ 
+    function redraw() {
+      drawGrid();
+      drawPoints();
+    }
+ 
+    canvas.addEventListener('mousedown', function(e) {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const dragCanvas = toCanvasCoords(dragPoint.x, dragPoint.y);
+      const dist = Math.hypot(mx - dragCanvas.x, my - dragCanvas.y);
+      if (dist < 15) {
+        dragging = true;
+      }
+    });
+    canvas.addEventListener('mousemove', function(e) {
+      if (!dragging) return;
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      let grid = toGridCoords(mx, my);
+      // Clamp to grid
+      grid.x = Math.max(gridMin, Math.min(gridMax, grid.x));
+      grid.y = Math.max(gridMin, Math.min(gridMax, grid.y));
+      dragPoint = grid;
+      redraw();
+    });
+    canvas.addEventListener('mouseup', function() { dragging = false; });
+    canvas.addEventListener('mouseleave', function() { dragging = false; });
+ 
+    document.getElementById('checkBtn').addEventListener('click', function() {
+      if (dragPoint.x === target.x && dragPoint.y === target.y) {
+        document.getElementById('result').textContent = 'Correct! 🎉';
+        document.getElementById('result').style.color = 'green';
+        document.getElementById('againBtn').style.display = 'inline-block';
+      } else {
+        document.getElementById('result').textContent = `Try again! You are at (${dragPoint.x}, ${dragPoint.y})`;
+        document.getElementById('result').style.color = 'red';
+      }
+    });
+    document.getElementById('againBtn').addEventListener('click', resetGame);
+ 
+    redraw();
+</script>
+</body>
+</html>
